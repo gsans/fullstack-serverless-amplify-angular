@@ -247,7 +247,7 @@ We can access the user's info now that they are signed in by calling `currentAut
 
 ```js
 import { Component } from '@angular/core';
-import { Auth } from 'aws-amplify';
+import Auth from '@aws-amplify/auth';
 
 @Component({
   selector: 'app-root',
