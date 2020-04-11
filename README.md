@@ -67,10 +67,10 @@ Add the following code, to the top of `src/polyfills.ts`. This is a requirement 
 
 ## Installing the CLI & Initializing a new AWS Amplify Project
 
-Let's now install the AWS Amplify API & AWS Amplify Angular library:
+Let's now install the AWS Amplify Authentication API & AWS Amplify Angular library:
 
 ```bash
-npm install --save @aws-amplify/auth aws-amplify-angular
+npm install --save @aws-amplify/auth @aws-amplify/ui-angular
 ```
 > If you have issues related to EACCESS try using sudo: `sudo npm <command>`.
 
@@ -194,7 +194,7 @@ Now, our app is ready to start using our AWS services.
 Add the Amplify Module and Service to `src/app/app.module.ts`:
 
 ```js
-import { AmplifyAngularModule, AmplifyService } from 'aws-amplify-angular';
+import { AmplifyUIAngularModule } from '@aws-amplify/ui-angular';
 
 @NgModule({
   declarations: [
@@ -202,19 +202,13 @@ import { AmplifyAngularModule, AmplifyService } from 'aws-amplify-angular';
   ],
   imports: [
     BrowserModule,
-    AmplifyAngularModule
+    AmplifyUIAngularModule
   ],
-  providers: [
-    AmplifyService
-  ],
+  providers: [],
   bootstrap: [AppComponent]
 })
 export class AppModule { }
 ```
-
-### Using Amplify Service
-
-The `AmplifyService` provides access to AWS Amplify core categories via Dependency Injection: auth, analytics, storage, api, cache, pubsub; and authentication state via Observables.
 
 ### Using the Authenticator Component
 
@@ -253,7 +247,7 @@ We can access the user's info now that they are signed in by calling `currentAut
 
 ```js
 import { Component } from '@angular/core';
-import { AmplifyService } from 'aws-amplify-angular';
+import { Auth } from 'aws-amplify';
 
 @Component({
   selector: 'app-root',
@@ -261,8 +255,8 @@ import { AmplifyService } from 'aws-amplify-angular';
   styleUrls: ['./app.component.css']
 })
 export class AppComponent {
-  constructor(public amplify: AmplifyService) {
-    amplify.auth().currentAuthenticatedUser().then(console.log)
+  constructor() {
+    Auth.currentAuthenticatedUser().then(console.log)
   }
 }
 ```
