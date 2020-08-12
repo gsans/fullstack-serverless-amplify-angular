@@ -18,8 +18,8 @@ In this workshop we'll learn how to build cloud-enabled web applications with An
 
 ## Pre-requisites
 
-- Node: `13.2.0`. Visit [Node](https://nodejs.org/en/download/current/)
-- npm: `6.13.1`. Packaged with Node otherwise run upgrade
+- Node: `14.7.0`. Visit [Node](https://nodejs.org/en/download/)
+- npm: `6.14.7`. Packaged with Node otherwise run upgrade
 
 ```bash
 npm install -g npm
@@ -45,7 +45,7 @@ ng serve
 ```
 ## Changes to Angular CLI project
 
-Add type definitions for __Node__ by changing `tsconfig.app.json`. This is a requirement from `aws-js-sdk`.
+Add type definitions for __Node__ by changing `src/tsconfig.app.json`. This is a requirement from `aws-js-sdk`.
 
 ```json
 {
@@ -59,20 +59,18 @@ Add the following code, to the top of `src/polyfills.ts`. This is a requirement 
 
 ```js
 (window as any).global = window;
-
 (window as any).process = {
-  env: { DEBUG: undefined }
+  env: { DEBUG: undefined },
 };
 ```
 
 ## Installing the CLI & Initializing a new AWS Amplify Project
 
-Let's now install the AWS Amplify API & AWS Amplify Angular library:
+Let's now install the AWS Amplify & AWS Amplify Angular libraries:
 
 ```bash
-npm install --save @aws-amplify/auth aws-amplify-angular
+npm install --save @aws-amplify/auth @aws-amplify/api @aws-amplify/pubsub @aws-amplify/storage @aws-amplify/ui-angular
 ```
-> If you have issues related to EACCESS try using sudo: `sudo npm <command>`.
 
 ### Installing the AWS Amplify CLI
 
@@ -81,8 +79,6 @@ Next, we'll install the AWS Amplify CLI:
 ```bash
 npm install -g @aws-amplify/cli
 ```
-> If your installation fails. Try `npm install -g @aws-amplify/cli --unsafe-perm=true`.
-> If you have issues related to fsevents with npm install. Try: `npm audit fix --force`.
 
 Now we need to configure the CLI with our credentials:
 
@@ -93,7 +89,10 @@ amplify configure
 > If you'd like to see a video walkthrough of this configuration process, click [here](https://www.youtube.com/watch?v=fWbM5DLh25U).
 
 Here we'll walk through the `amplify configure` setup. Once you've signed in to the AWS console, continue:
-- Specify the AWS Region: __ap-northeast-1 (Tokyo)__
+- Specify the AWS Region: __eu-central-1(Frankfurt)__
+
+> Find out the best AWS Region to host your app (lower latency is best): [AWS latency test](https://ping.psa.fun), [CloudPing.info](https://www.cloudping.info).
+
 - Specify the username of the new IAM user: __amplify-app__
 > In the AWS Console, click __Next: Permissions__, __Next: Tags__, __Next: Review__, & __Create User__ to create the new IAM user. Then, return to the command line & press Enter.
 - Enter the access key of the newly created user:   
@@ -135,7 +134,7 @@ Now, the AWS Amplify CLI has iniatilized a new project & you will see a new fold
 
 ## Adding Authentication
 
-To add authentication to our Amplify project, we can use the following command:
+To add authentication, we can use the following command:
 
 ```sh
 amplify add auth
@@ -144,12 +143,8 @@ amplify add auth
 > When prompted choose 
 - Do you want to use default authentication and security configuration?: __Default configuration__
 - How do you want users to be able to sign in when using your Cognito User Pool?: __Username__
-- Do you want to configure advanced settings? __Yes, I want to make some additional changes.__
-- What attributes are required for signing up? (Press &lt;space&gt; to select, &lt;a&gt; to 
-toggle all, &lt;i&gt; to invert selection): __Email__
-- Do you want to enable any of the following capabilities? (Press &lt;space&gt; to select, &lt;a&gt; to toggle all, &lt;i&gt; to invert selection): __None__
-
-> To select none just press `Enter` in the last option.
+- What attributes are required for signing up? (Press <space> to select, to toggle all, to
+invert selection): __Email__
 
 Now, we'll run the push command and the cloud resources will be created in our AWS account.
 
@@ -163,7 +158,6 @@ Current Environment: dev
 | Auth     | amplifyappuuid     | Create    | awscloudformation |
 ? Are you sure you want to continue? Yes
 ```
-
 
 To quickly check your newly created __Cognito User Pool__ you can run
 
@@ -183,55 +177,35 @@ To configure the app, open __main.ts__ and add the following code below the last
 
 ```js
 import Auth from '@aws-amplify/auth';
+import API from '@aws-amplify/api';
+import PubSub from '@aws-amplify/pubsub';
 import amplify from './aws-exports';
 Auth.configure(amplify);
+API.configure(amplify);
+PubSub.configure(amplify);
 ```
 
 Now, our app is ready to start using our AWS services.
 
 ### Importing the Angular Module
 
-Add the Amplify Module and Service to `src/app/app.module.ts`:
+Add the Amplify UI Module to `src/app/app.module.ts`:
 
 ```js
-import { AmplifyAngularModule, AmplifyService } from 'aws-amplify-angular';
+import { AmplifyUIAngularModule } from '@aws-amplify/ui-angular';
 
 @NgModule({
-  declarations: [
-    AppComponent
-  ],
   imports: [
-    BrowserModule,
-    AmplifyAngularModule
+    AmplifyUIAngularModule
   ],
-  providers: [
-    AmplifyService
-  ],
-  bootstrap: [AppComponent]
-})
-export class AppModule { }
+});
 ```
-
-### Using Amplify Service
-
-The `AmplifyService` provides access to AWS Amplify core categories via Dependency Injection: auth, analytics, storage, api, cache, pubsub; and authentication state via Observables.
 
 ### Using the Authenticator Component
 
 AWS Amplify provides UI components that you can use in your App. Let's add these components to the project
 
-```bash
-npm i --save @aws-amplify/ui
-```
-
-Also include these imports to the top of `styles.css`
-
-```css
-@import "~@aws-amplify/ui/src/Theme.css";
-@import "~@aws-amplify/ui/src/Angular.css";
-```
-
-In order to use the Authenticator Component replace all content in __src/app.component.html__ with:
+In order to use the Authenticator Component add it to __src/app/app.component.html__:
 
 ```html
 <amplify-authenticator></amplify-authenticator>
@@ -252,17 +226,59 @@ amplify console auth
 We can access the user's info now that they are signed in by calling `currentAuthenticatedUser()` which returns a Promise.
 
 ```js
-import { Component } from '@angular/core';
-import { AmplifyService } from 'aws-amplify-angular';
+import Auth from '@aws-amplify/auth';
 
-@Component({
-  selector: 'app-root',
-  templateUrl: './app.component.html',
-  styleUrls: ['./app.component.css']
-})
+@Component(...)
 export class AppComponent {
-  constructor(public amplify: AmplifyService) {
-    amplify.auth().currentAuthenticatedUser().then(console.log)
+  constructor() {
+    Auth.currentAuthenticatedUser().then(console.log)
+  }
+}
+```
+
+### Managing authentication states
+
+The `Authenticator` Component goes through different states as the user interacts with the authentication flow. Let's see a more advanced example of showing a welcome message to the user once is logged in:
+
+Replace the content of __src/app/app.component.html__ with:
+
+```html
+<div>
+  <amplify-authenticator *ngIf="!signedIn"></amplify-authenticator>
+
+  <div *ngIf="signedIn && user">
+    <div>Hello, {{user.username}}</div>
+    <amplify-sign-out></amplify-sign-out>
+  </div>
+</div>
+```
+
+In our component make the following changes
+
+```js
+import { Component, ChangeDetectorRef, OnInit, OnDestroy } from '@angular/core';
+import { onAuthUIStateChange, CognitoUserInterface, AuthState } from '@aws-amplify/ui-components';
+import Auth from '@aws-amplify/auth';
+
+@Component(...)
+export class AppComponent implements OnInit, OnDestroy {
+  user: CognitoUserInterface | undefined;
+  signedIn: boolean;
+
+  constructor(private ref: ChangeDetectorRef) {
+    Auth.currentAuthenticatedUser().then(console.log)    
+  }
+
+  ngOnInit() {
+    onAuthUIStateChange((authState, authData) => {
+      this.signedIn = authState === AuthState.SignedIn;
+      this.user = authData as CognitoUserInterface;
+      this.ref.detectChanges();
+    })
+  }
+
+  ngOnDestroy() {
+    return onAuthUIStateChange;
   }
 }
 ```
@@ -332,24 +348,17 @@ Answer the following questions
 - Provide API name: __RestaurantAPI__
 - Choose the default authorization type for the API __API key__
 - Enter a description for the API key: __(empty)__
-- After how many days from now the API key should expire (1-365): __180__
-- Do you want to configure advanced settings for the GraphQL API __Yes, I want to make some additional changes.__
-- Choose the additional authorization types you want to configure for the API (Press &lt;space&gt; to select, &lt;a&gt; to 
-toggle all, &lt;i&gt; to invert selection) __None__
+- After how many days from now the API key should expire (1-365): __7__
+- Do you want to configure advanced settings for the GraphQL API __No, I am done.__
 - Do you have an annotated GraphQL schema? __No__
-- Do you want a guided schema creation? __Yes__
-- What best describes your project: __Single object with fields (e.g., “Todo” with ID, name, description)__
+- Choose a schema template: __Single object with fields (e.g., “Todo” with ID, name, description)__
 - Do you want to edit the schema now? __Yes__
-
-> To select none just press `Enter`.
-
 
 > When prompted, update the schema to the following:   
 
 ```graphql
 type Restaurant @model {
   id: ID!
-  clientId: String
   name: String!
   description: String!
   city: String!
@@ -462,27 +471,10 @@ To do so, we need to define the query, execute the query, store the data in our 
 
 > Read more about the __Amplify GraphQL Client__ [here](https://aws-amplify.github.io/docs/js/api#amplify-graphql-client).
 
-First, we will install the AWS Amplify API and PubSub libraries:
-
-```bash
-npm install --save @aws-amplify/api @aws-amplify/pubsub
-```
-
-To configure the app, open __main.ts__ and change the initial code to configure the new dependencies:
-
-```js
-import Auth from '@aws-amplify/auth';
-import API from '@aws-amplify/api';
-import PubSub from '@aws-amplify/pubsub';
-import amplify from './aws-exports';
-Auth.configure(amplify);
-API.configure(amplify);
-PubSub.configure(amplify);
-```
 
 ```js
 import { APIService } from '../API.service';
-import { Restaurant } from './types/restaurant';
+import { Restaurant } from './../types/restaurant';
 
 @Component({
   template: `
@@ -494,10 +486,12 @@ import { Restaurant } from './types/restaurant';
 })
 export class AppComponent implements OnInit {
   restaurants: Array<Restaurant>;
-  constructor(public api: APIService) { }
+
+  constructor(private api: APIService) { }
+
   ngOnInit() {
-    this.api.ListRestaurants().then(data => {
-      this.restaurants = data.items;
+    this.api.ListRestaurants().then(event => {
+      this.restaurants = event.items;
     });
   }
 }
@@ -509,13 +503,12 @@ export class AppComponent implements OnInit {
 
 ```js
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
-import { createRestaurant } from '../../graphql/mutations'
 
 @Component(...)
 export class HomeComponent implements OnInit {
   public createForm: FormGroup;
 
-  constructor(private fb: FormBuilder) { }
+  constructor(private api: APIService, private fb: FormBuilder) { }
 
   async ngOnInit() {
     this.createForm = this.fb.group({
@@ -544,13 +537,14 @@ export class HomeComponent implements OnInit {
 
 Next, let's see how we can create a subscription to subscribe to changes of data in our API.
 
-To do so, we need to listen to the subscription, & update the state whenever a new piece of data comes in through the subscription.
+To do so, we need to define the subscription, listen for the subscription, & update the state whenever a new piece of data comes in through the subscription.
 
 ```js
 @Component(...)
 export class HomeComponent implements OnInit {
   ngOnInit() {
-    this.api.OnCreateRestaurantListener.subscribe(event => {
+    //Subscribe to changes
+    this.api.OnCreateRestaurantListener.subscribe( (event: any) => {
       const newRestaurant = event.value.data.onCreateRestaurant;
       this.restaurants = [newRestaurant, ...this.restaurants];
     });
@@ -777,7 +771,11 @@ git commit -m 'initial commit'
 git push origin master
 ```
 
-Next we'll visit the Amplify Console in our AWS account at [https://ap-northeast-1.console.aws.amazon.com/amplify/home](https://ap-northeast-1.console.aws.amazon.com/amplify/home).
+Next we'll visit the Amplify Console in our AWS account:
+
+```bash
+amplify console
+```
 
 Here, we'll click __Get Started__ to create a new deployment. Next, authorize Github as the repository service.
 
@@ -801,7 +799,7 @@ Now, we can push updates to Master to update our application.
 2. Install and configure the Amplify CLI
 
 ```
-  amplify init --app https://github.com/gsans/ng-china-workshop-solution
+  amplify init --app https://github.com/gsans/fullstack-serverless-amplify-angular
 ```
   
 >The init command clones the GitHub repo, initializes the CLI, creates a ‘sampledev’ environment in CLI, detects and adds categories, provisions the backend, pushes the changes to the cloud, and starts the app.
@@ -827,6 +825,11 @@ amplify status
 
 `amplify status` will give you the list of resources that are currently enabled in your app.
 
+## Deleting entire project
+
+```sh
+amplify delete
+```
 
 ## Appendix
 
